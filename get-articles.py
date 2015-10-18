@@ -1,10 +1,9 @@
 #!/usr/bin/python3.4
 from bs4 import BeautifulSoup
-from collections import namedtuple
+import json
 import requests
+import re
 import sys
-
-Article = namedtuple('Article', ['title', 'link', 'comments_link'])
 
 def getPageContent(url):
     # Reddit uses user-agent id as a rudimentary bot checking mech.
@@ -28,14 +27,20 @@ def getArticles(reddit_page):
             res2 = art.find_all('a', {'class', 'comments'})
             title = res1[0].a.string
             link = res1[0].a['href']
-            comments_link = res2[0]['href']
-            articles.append(Article(title=title, link=link, comments_link=comments_link))
+            comments = res2[0]['href']
+            if re.match('^(/r/)', link) is not None:
+                link = "https://www.reddit.com" + link
+
+            articles.append({"title":    title,
+                             "link":     link,
+                             "comments": comments,
+                             "author":   "me"})
 
     return articles
 
 
 if __name__ == "__main__":
-    url="https://www.reddit.com/r/showerthoughts/?count=25"
+    url="https://www.reddit.com/r/AskReddit"
     page_content = getPageContent(url)
     articles = getArticles(page_content)
 
@@ -44,8 +49,5 @@ if __name__ == "__main__":
 #         articles = getArticles(text)
 
     print("Number of articles found: ", len(articles))
-    for a in articles:
-        print("title:    ", a.title)
-        print("link:     ", a.link)
-        print("comments: ", a.comments_link)
-        print("")
+    print(json.dumps(articles, sort_keys=True,
+                     indent=4, separators=(',', ': ')))
