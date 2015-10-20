@@ -1,5 +1,7 @@
 #!/usr/bin/python3.4
 from bs4 import BeautifulSoup
+from datetime import datetime
+import dateutil.parser
 import json
 import requests
 import re
@@ -13,28 +15,41 @@ def getPageContent(url):
 
 def getArticles(reddit_page):
     articles = []
-
     soup = BeautifulSoup(reddit_page)
 
-    # Find Articles Table
+    # Find Articles Table in HTML
     table = soup.find('div', {'id':'siteTable'})
     for art in table:
+
         # Only get articles that have a rank assoc with them
-        # "real" articles
-        res = art.find('span', {'class':'rank'})
-        if res is not None and res.string is not None:
-            res1 = art.find_all('p', {'class', 'title'})
-            res2 = art.find_all('a', {'class', 'comments'})
-            title = res1[0].a.string
-            link = res1[0].a['href']
-            comments = res2[0]['href']
+        # This eliminates sticky posts and sponsored posts
+        real_art = art.find('span', {'class':'rank'})
+        if real_art is not None and real_art.string is not None:
+
+            # Get article title and link
+            title_elem = art.find_all('p', {'class', 'title'})
+            title = title_elem[0].a.string
+            link = title_elem[0].a['href']
+
+            # Get comments link
+            comm_elem = art.find_all('a', {'class', 'comments'})
+            comments = comm_elem[0]['href']
+
+            # Get author and timestamp under tagline div
+            tagline_elem = art.find_all('p', {'class', 'tagline'})
+            author = tagline_elem[0].a.string
+            timestamp = dateutil.parser.parse(tagline_elem[0].time['datetime'])
+
+            # Resolve full URL for reddit links
             if re.match('^(/r/)', link) is not None:
                 link = "https://www.reddit.com" + link
 
-            articles.append({"title":    title,
-                             "link":     link,
-                             "comments": comments,
-                             "author":   "me"})
+            articles.append({"title":     title,
+                             "link":      link,
+                             "comments":  comments,
+                             "author":    author,
+                             "timestamp": int(timestamp.strftime("%s")),})
+
 
     return articles
 
