@@ -8,16 +8,23 @@ import re
 import sys
 
 def getPageContent(url):
+    """
+        Gets a subreddit front page.
+    """
     # Reddit uses user-agent id as a rudimentary bot checking mech.
+    # BEWARE, THERE COULD ME MORE!
     user_agent = {'User-agent': 'Mozilla/5.0'}
     page = requests.get(url, headers = user_agent)
     return page.content
 
 def getArticles(reddit_page):
+    """
+        Parses subreddit page HTML for article information.
+    """
     articles = []
     soup = BeautifulSoup(reddit_page)
 
-    # Find Articles Table in HTML
+    # Find table of articles in HTML
     table = soup.find('div', {'id':'siteTable'})
     for art in table:
 
@@ -35,12 +42,12 @@ def getArticles(reddit_page):
             comm_elem = art.find_all('a', {'class', 'comments'})
             comments = comm_elem[0]['href']
 
-            # Get author and timestamp under tagline div
+            # Get author and timestamp
             tagline_elem = art.find_all('p', {'class', 'tagline'})
             author = tagline_elem[0].a.string
             timestamp = dateutil.parser.parse(tagline_elem[0].time['datetime'])
 
-            # Resolve full URL for reddit links
+            # Resolve full URL for internal reddit links
             if re.match('^(/r/)', link) is not None:
                 link = "https://www.reddit.com" + link
 
@@ -49,8 +56,6 @@ def getArticles(reddit_page):
                              "comments":  comments,
                              "author":    author,
                              "timestamp": int(timestamp.strftime("%s")),})
-
-
     return articles
 
 
@@ -59,10 +64,7 @@ if __name__ == "__main__":
     page_content = getPageContent(url)
     articles = getArticles(page_content)
 
-#     with open('content.html', 'r') as f:
-#         text = f.read()
-#         articles = getArticles(text)
-
-    print("Number of articles found: ", len(articles))
     print(json.dumps(articles, sort_keys=True,
                      indent=4, separators=(',', ': ')))
+
+    print("Number of articles found: ", len(articles))
