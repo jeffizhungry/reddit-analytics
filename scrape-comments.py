@@ -19,10 +19,10 @@ def expand_load_comments(browser):
     # So we need to recursively click all these links
     found_link = True
     curr_retry_count = RETRY_COUNT
-    while found_link or curr_retry_count + 1 > 0:
+    while found_link or curr_retry_count > 0:
         found_link = False
         morecomments = browser.find_elements_by_xpath('.//span[@class = "morecomments"]')
-        debug("NUM OF ELEMS IN CLASS (morecomments): {}".format(len(morecomments)))
+        debug("NUM OF ELEMS OF CLASS (morecomments): {}".format(len(morecomments)))
         for elem in morecomments:
             try:
                 # Click loading more comments
@@ -64,13 +64,14 @@ def grab_continue_this_thread_links(browser):
     while found_link or curr_retry_count + 1 > 0:
         found_link = False
         continue_elems = browser.find_elements_by_xpath('.//span[@class = "deepthread"]/a')
-        debug("NUM OF ELEMS IN CLASS (deepthread): {}".format(len(continue_elems)))
+        debug("NUM OF ELEMS OF CLASS (deepthread): {}".format(len(continue_elems)))
         for elem in continue_elems:
             try:
                 if elem.text.startswith("continue this thread"):
                     href = elem.get_attribute('href')
                     if href not in links:
                         found_link = True
+                        curr_retry_count = RETRY_COUNT
                         links.add(href)
                         debug("FOUND CONTINUE THIS THREAD LINK: ", href)
 
@@ -88,13 +89,18 @@ def grab_continue_this_thread_links(browser):
     return links
 
 if __name__ == "__main__":
-    url="https://www.reddit.com/r/Showerthoughts/comments/3ph5vg/the_usa_doesnt_have_a_name_for_their_country_they/"
-    # url = 'https://www.reddit.com/r/AskReddit/comments/41gg03/whatever_you_were_doing_10_minutes_ago_is_the/'
+    # url="https://www.reddit.com/r/Showerthoughts/comments/3ph5vg/the_usa_doesnt_have_a_name_for_their_country_they/"
+    url = 'https://www.reddit.com/r/AskReddit/comments/41gg03/whatever_you_were_doing_10_minutes_ago_is_the/'
 
     browser = webdriver.Firefox()
     browser.get(url)
 
+    with open('original.html', 'w') as f:
+        f.write(browser.page_source)
     expand_load_comments(browser)
-    grab_continue_this_thread_links(browser)
+    with open('expanded.html', 'w') as f:
+        f.write(browser.page_source)
 
-    # browser.quit()
+#     grab_continue_this_thread_links(browser)
+
+    browser.quit()

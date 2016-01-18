@@ -1,9 +1,10 @@
-## Todo
-- load all comments on a comments page using selenium
-- parse comment tree
+## Feature Set
+- [x] grab URLs and metadata from a subreddit front page
+- [x] expand comments recursively
 
-## Done
-- Given subreddit URL, relevent article information on that page
+- [ ] add support for headless browser
+- [ ] parse comments HTML into JSON 
+- [ ] store comments in a file or database for persistance
 
 ## Contributors
 * Jeffrey Hwang (jeffizhungry)
