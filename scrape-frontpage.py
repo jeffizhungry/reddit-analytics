@@ -1,4 +1,4 @@
-#!/usr/bin/python3.4
+#!/usr/bin/env python34
 from bs4 import BeautifulSoup
 from datetime import datetime
 import dateutil.parser
@@ -7,20 +7,20 @@ import requests
 import re
 import sys
 
-def getPageContent(url):
-    """
-        Gets a subreddit front page.
-    """
+def _get_page_content(url):
+    """ Gets a subreddit front page. """
+
     # Reddit uses user-agent id as a rudimentary bot checking mech.
     # BEWARE, THERE COULD ME MORE!
     user_agent = {'User-agent': 'Mozilla/5.0'}
     page = requests.get(url, headers = user_agent)
     return page.content
 
-def getArticles(reddit_page):
-    """
-        Parses subreddit page HTML for article information.
-    """
+def get_articles(url):
+    """ Parses subreddit page HTML for article information. """
+
+    reddit_page = _get_page_content(url)
+
     articles = []
     soup = BeautifulSoup(reddit_page)
 
@@ -51,18 +51,17 @@ def getArticles(reddit_page):
             if re.match('^(/r/)', link) is not None:
                 link = "https://www.reddit.com" + link
 
-            articles.append({"title":     title,
-                             "link":      link,
-                             "comments":  comments,
-                             "author":    author,
-                             "timestamp": int(timestamp.strftime("%s")),})
+            articles.append({"title":          title,
+                             "link":           link,
+                             "comments_link":  comments,
+                             "author":         author,
+                             "timestamp":      int(timestamp.strftime("%s")),})
     return articles
 
 
 if __name__ == "__main__":
     url="https://www.reddit.com/r/AskReddit"
-    page_content = getPageContent(url)
-    articles = getArticles(page_content)
+    articles = get_articles(url)
 
     print(json.dumps(articles, sort_keys=True,
                      indent=4, separators=(',', ': ')))
