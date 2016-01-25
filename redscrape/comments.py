@@ -21,7 +21,8 @@ def expand_load_comments(browser):
     curr_retry_count = RETRY_COUNT
     while found_link or curr_retry_count > 0:
         found_link = False
-        morecomments = browser.find_elements_by_xpath('.//span[@class = "morecomments"]')
+        morecomments = browser.find_elements_by_xpath(""".//span[@class =
+                                                        "morecomments"]""")
         debug("NUM OF ELEMS OF CLASS (morecomments): {}".format(len(morecomments)))
         for elem in morecomments:
             try:
@@ -49,7 +50,8 @@ def expand_load_comments(browser):
         # Sometimes the page takes longer than usual to load, and no links are
         # available because the page hasn't loaded yet! So try again!
         if not found_link:
-            debug("NO MORE LINKS FOUND, GIVE {} MORE CHANCE(S)".format(curr_retry_count))
+            debug("NO MORE LINKS FOUND, GIVE {} MORE CHANCE(S)"
+                  .format(curr_retry_count))
             sleep(RETRY_SLEEP)
             curr_retry_count = curr_retry_count - 1
 
@@ -63,7 +65,8 @@ def grab_continue_this_thread_links(browser):
     curr_retry_count = RETRY_COUNT
     while found_link or curr_retry_count + 1 > 0:
         found_link = False
-        continue_elems = browser.find_elements_by_xpath('.//span[@class = "deepthread"]/a')
+        continue_elems = browser.find_elements_by_xpath(""".//span[@class =
+                                                        "deepthread"]/a""")
         debug("NUM OF ELEMS OF CLASS (deepthread): {}".format(len(continue_elems)))
         for elem in continue_elems:
             try:
@@ -82,25 +85,29 @@ def grab_continue_this_thread_links(browser):
         # Sometimes the page takes longer than usual to load, and no links are
         # available because the page hasn't loaded yet! So try again!
         if not found_link:
-            debug("NO MORE LINKS FOUND, GIVE {} MORE CHANCE(S)".format(curr_retry_count))
+            debug("NO MORE LINKS FOUND, GIVE {} MORE CHANCE(S)"
+                    .format(curr_retry_count))
             sleep(RETRY_SLEEP)
             curr_retry_count = curr_retry_count - 1
 
     return links
 
 if __name__ == "__main__":
-    # url="https://www.reddit.com/r/Showerthoughts/comments/3ph5vg/the_usa_doesnt_have_a_name_for_their_country_they/"
-    url = 'https://www.reddit.com/r/AskReddit/comments/41gg03/whatever_you_were_doing_10_minutes_ago_is_the/'
+    url = """https://www.reddit.com/r/Showerthoughts/comments/42iws7/taylor_swift_is_now_the_other_girl_from_her_song/"""
 
     browser = webdriver.Firefox()
     browser.get(url)
 
-    with open('original.html', 'w') as f:
-        f.write(browser.page_source)
-    expand_load_comments(browser)
-    with open('expanded.html', 'w') as f:
-        f.write(browser.page_source)
+#     expand_load_comments(browser)
+#     with open('expanded.html', 'w') as f:
+#         f.write(browser.page_source)
 
-#     grab_continue_this_thread_links(browser)
+#     for link in grab_continue_this_thread_links(browser):
+#         print(link)
 
     browser.quit()
+
+
+###############################################################################
+#   url="https://www.reddit.com/r/Showerthoughts/comments/3ph5vg/the_usa_doesnt_have_a_name_for_their_country_they/"
+#   url = 'https://www.reddit.com/r/AskReddit/comments/41gg03/whatever_you_were_doing_10_minutes_ago_is_the/'

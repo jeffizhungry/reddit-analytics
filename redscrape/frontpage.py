@@ -17,12 +17,23 @@ def _get_page_content(url):
     return page.content
 
 def get_articles(url):
-    """ Parses subreddit page HTML for article information. """
+    """
+    Parses subreddit page HTML for article information.
+
+    Returns an array of JSON objects in the form.
+    {
+        "title":            title,
+        "link":             link,
+        "comments_link":    comments,
+        "author":           author,
+        "timestamp":        int(timestamp.strftime("%s"))
+    }
+    """
 
     reddit_page = _get_page_content(url)
 
     articles = []
-    soup = BeautifulSoup(reddit_page)
+    soup = BeautifulSoup(reddit_page, "html.parser")
 
     # Find table of articles in HTML
     table = soup.find('div', {'id':'siteTable'})
@@ -60,7 +71,12 @@ def get_articles(url):
 
 
 if __name__ == "__main__":
-    url="https://www.reddit.com/r/AskReddit"
+    if len(sys.argv) != 2:
+        print("Improper number of arguemnts")
+        print("USAGE: python3.4 {} <subreddit>".format(sys.argv[0]))
+        sys.exit(1)
+
+    url="https://www.reddit.com/r/{}".format(sys.argv[1])
     articles = get_articles(url)
 
     print(json.dumps(articles, sort_keys=True,
