@@ -16,7 +16,38 @@ def _get_page_content(url):
     page = requests.get(url, headers = user_agent)
     return page.content
 
-def _parse_comment_entitiy(bs4_tag):
+def _parse_comment(com):
+    """
+    Parses comment in the form of a BS4 Tag.
+    """
+    # Get Author
+    author = com.find('a', {'class', 'author'}).string
+
+    # Get Comment Text
+    text = com.find('div', {'class', 'md'}).p.string
+
+    # Get Timestamp
+    raw_ts = com.find_all('time', {'class', 'live-timestamp'})[0]["datetime"]
+    ts = dateutil.parser.parse(raw_ts)
+
+    # Get Comment ID
+    comm_id = com.p.a["name"]
+
+    # Get Children
+    children = []
+    raw_children = com.find_all('div', {'id':'siteTable_t1_{}'.format(comm_id)})
+    if len(raw_children) > 0:
+        for rc in raw_children[0]:
+            if "comment" in rc["class"]:
+                children.append(_parse_comment(rc))
+
+    return {
+        "id":           comm_id,
+        "author":       author,
+        "text":         text,
+        "timestamp":    int(ts.strftime("%s")),
+        "children":     children,
+    }
     pass
 
 def _find_comment_section(html):
@@ -28,6 +59,7 @@ def get_comments(url):
 
     Returns an array of JSON objects in the form.
     {
+        "id":           comment_id
         "author":       author,
         "timestamp":    int(timestamp.strftime("%s"))
         "comment":      "you like that you fucking retard?",
@@ -49,19 +81,7 @@ def get_comments(url):
 
     # Parse Comment Div
     for com in comments:
-
-        # Get Author
-        author = com.find_all('a', {'class', 'author'})[0].string
-
-        # Get Comment Text
-        text = com.find_all('div', {'class', 'md'})[0].p.string
-
-        # Get Timestamp
-        raw_ts = com.find_all('time', {'class', 'live-timestamp'})[0]["datetime"]
-        ts = dateutil.parser.parse(raw_ts)
-        print(ts)
-
-        # dateutil.parser.parse(ext = com.find_all('div', {'class', 'md'})[0].p.string
+        return _parse_comment(com)
 
     return None
 
