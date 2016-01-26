@@ -1,113 +1,83 @@
-#!/usr/bin/env python3.4
-from time import sleep
-from selenium import webdriver
-from selenium.common.exceptions import WebDriverException
+#!/usr/bin/env python34
+from bs4 import BeautifulSoup
+from datetime import datetime
+import dateutil.parser
+import json
+import requests
+import re
+import sys
 
-VERBOSE = True      # Enable debug output
-CLICK_DELAY = 0.5   # Add some delays between clicks to mimic human click
-RETRY_COUNT = 1     # Retry on when page taking longer than usual to load
-RETRY_SLEEP = 5.0   # Retry sleep and wait on long page load
+def _parse_comment(com):
 
-def debug(*args):
-    if VERBOSE:
-        print(*args)
+    # Get Author
+    author = bs4_tag.find('a', {'class', 'author'}).string
 
-def expand_load_comments(browser):
-    """ Expand nested reddit comments by clicking load comments. """
+    # Get Comment Text
+    text = bs4_tag.find('div', {'class', 'md'}).p.string
 
-    # Load more comments might generate more new nested load comment links
-    # So we need to recursively click all these links
-    found_link = True
-    curr_retry_count = RETRY_COUNT
-    while found_link or curr_retry_count > 0:
-        found_link = False
-        morecomments = browser.find_elements_by_xpath(""".//span[@class =
-                                                        "morecomments"]""")
-        debug("NUM OF ELEMS OF CLASS (morecomments): {}".format(len(morecomments)))
-        for elem in morecomments:
-            try:
-                # Click loading more comments
-                if elem.text.startswith("load more comments"):
-                    found_link = True
-                    curr_retry_count = RETRY_COUNT
-                    debug("CLICKING: {}".format(elem.text))
-                    elem.click()
-                    sleep(CLICK_DELAY)
+    # Get Timestamp
+    raw_ts = bs4_tag.find_all('time', {'class', 'live-timestamp'})[0]["datetime"]
+    ts = dateutil.parser.parse(raw_ts)
 
-                # loading... button indicates we went to fast, sleep to slow down
-                elif elem.text.startswith("loading..."):
-                    sleep(2.0)
-                    found_link = True
-                    curr_retry_count = RETRY_COUNT
-                    debug("CLICKING: {}".format(elem.text))
-                    elem.click()
-                    sleep(CLICK_DELAY)
+    # Get Comment ID
+    comm_id = bs4_tag.p.a["name"]
 
-            # Don't care about selenium exceptions, log and move on
-            except WebDriverException as e:
-                print("EXCEPTION ON CLICK CAUGHT: ", e)
+    # Get Children
+    children = []
+    children_elem = bs4_tag.find_all('div', {'id':'siteTable_t1_{}'.format(comm_id)})
+    if len(children_elem) > 0:
+        for rc in children_elem[0]:
+            if "comment" in rc["class"]:
+                children.append(_parse_comment(rc))
 
-        # Sometimes the page takes longer than usual to load, and no links are
-        # available because the page hasn't loaded yet! So try again!
-        if not found_link:
-            debug("NO MORE LINKS FOUND, GIVE {} MORE CHANCE(S)"
-                  .format(curr_retry_count))
-            sleep(RETRY_SLEEP)
-            curr_retry_count = curr_retry_count - 1
+    return {
+        "id":           comm_id,
+        "author":       author,
+        "text":         text,
+        "timestamp":    int(ts.strftime("%s")),
+        "children":     children,
+    }
 
-    return
+def get_comments(url):
+    """
+    Parses comment's page HTML for comments.
 
-def grab_continue_this_thread_links(browser):
-    links = set([])
+    Returns an array of JSON objects in the form.
+    {
+        "id":           comment_id
+        "author":       author,
+        "timestamp":    int(timestamp.strftime("%s"))
+        "comment":      "you like that you fucking retard?",
+        "children":     [],
+    }
+    """
 
-    # Continue this thread might generate more new nested continue this thread links
-    found_link = True
-    curr_retry_count = RETRY_COUNT
-    while found_link or curr_retry_count + 1 > 0:
-        found_link = False
-        continue_elems = browser.find_elements_by_xpath(""".//span[@class =
-                                                        "deepthread"]/a""")
-        debug("NUM OF ELEMS OF CLASS (deepthread): {}".format(len(continue_elems)))
-        for elem in continue_elems:
-            try:
-                if elem.text.startswith("continue this thread"):
-                    href = elem.get_attribute('href')
-                    if href not in links:
-                        found_link = True
-                        curr_retry_count = RETRY_COUNT
-                        links.add(href)
-                        debug("FOUND CONTINUE THIS THREAD LINK: ", href)
+    # Reddit uses user-agent id as a rudimentary bot checking mech.
+    # BEWARE, THERE COULD ME MORE!
+    user_agent = {'User-agent': 'Mozilla/5.0'}
+    reddit_page = requests.get(url, headers = user_agent).content
+    soup = BeautifulSoup(reddit_page, "html.parser")
 
-            # Don't care about selenium exceptions, log and move on
-            except WebDriverException as e:
-                print("EXCEPTION ON CLICK CAUGHT: ", e)
+    # Extract comment page ID from link
+    comm_page_id = re.search('^.*comments/([a-z0-9]*)/', url, re.IGNORECASE).group(1)
+    if comm_page_id is None:
+        return None
 
-        # Sometimes the page takes longer than usual to load, and no links are
-        # available because the page hasn't loaded yet! So try again!
-        if not found_link:
-            debug("NO MORE LINKS FOUND, GIVE {} MORE CHANCE(S)"
-                    .format(curr_retry_count))
-            sleep(RETRY_SLEEP)
-            curr_retry_count = curr_retry_count - 1
+    comments = []
 
-    return links
+    # Find table of articles in HTML
+    comm_elems = soup.find('div', {'id':'siteTable_t3_{}'.format(comm_page_id)})
+    if len(comm_elems) > 0:
+        for c in comm_elems:
+            if "comment" in c["class"]:
+                comments.append(_parse_comment(c))
+
+    return comments
 
 if __name__ == "__main__":
-    url = """https://www.reddit.com/r/Showerthoughts/comments/42iws7/taylor_swift_is_now_the_other_girl_from_her_song/"""
+    url = "https://www.reddit.com/r/Showerthoughts/comments/42hs0g/when_its_snowing_in_america_the_whole_world_gets/"
+    url = "https://www.reddit.com/r/Showerthoughts/comments/42nmgq/smoking_is_one_of_the_leading_causes_of_statistics/"
+    articles = get_comments(url)
 
-    browser = webdriver.Firefox()
-    browser.get(url)
-
-#     expand_load_comments(browser)
-#     with open('expanded.html', 'w') as f:
-#         f.write(browser.page_source)
-
-#     for link in grab_continue_this_thread_links(browser):
-#         print(link)
-
-    browser.quit()
-
-
-###############################################################################
-#   url="https://www.reddit.com/r/Showerthoughts/comments/3ph5vg/the_usa_doesnt_have_a_name_for_their_country_they/"
-#   url = 'https://www.reddit.com/r/AskReddit/comments/41gg03/whatever_you_were_doing_10_minutes_ago_is_the/'
+    print(json.dumps(articles, sort_keys=True,
+                     indent=4, separators=(',', ': ')))
