@@ -7,7 +7,13 @@ import requests
 import re
 import sys
 
-def _parse_comment(com):
+def _parse_comment(bs4_tag):
+
+#     # Get deep thread link
+#     if "morerecursion" in bs4_tag["class"]:
+#         cont_link = bs4_tag.find('span', {'class', 'deepthread'}).a["href"]
+#         print("CONT_LINK: ", cont_link)
+#         return cont_link
 
     # Get Author
     author = bs4_tag.find('a', {'class', 'author'}).string
@@ -28,7 +34,8 @@ def _parse_comment(com):
     if len(children_elem) > 0:
         for rc in children_elem[0]:
             if "comment" in rc["class"]:
-                children.append(_parse_comment(rc))
+                ret = _parse_comment(rc)
+                children.append(ret)
 
     return {
         "id":           comm_id,
@@ -79,5 +86,5 @@ if __name__ == "__main__":
     url = "https://www.reddit.com/r/Showerthoughts/comments/42nmgq/smoking_is_one_of_the_leading_causes_of_statistics/"
     articles = get_comments(url)
 
-    print(json.dumps(articles, sort_keys=True,
-                     indent=4, separators=(',', ': ')))
+#     print(json.dumps(articles, sort_keys=True,
+#                      indent=4, separators=(',', ': ')))

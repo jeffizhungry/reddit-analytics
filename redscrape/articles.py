@@ -30,9 +30,15 @@ def _parse_article(bs4_tag):
     # Get Comments Link
     comm_link = bs4_tag.find('a', {'class', 'comments'})["href"]
 
-    # Get author and timestamp
+    # Get author
+    author_elem = bs4_tag.find('a', {'class', 'author'})
+    if author_elem is None:
+        author = 'deleted'
+    else:
+        author = author_elem.string
+
+    # Get timestamp
     tagline_elem = bs4_tag.find('p', {'class', 'tagline'})
-    author = tagline_elem.a.string
     timestamp = dateutil.parser.parse(tagline_elem.time['datetime'])
 
     return {"title":          title,
@@ -62,8 +68,14 @@ def get_articles(subreddit_url):
 
     # Find table of articles in HTML
     table = soup.find('div', {'id':'siteTable'})
+    if table is None:
+        return articles
+
+    # Find articles that have a RANK associated with them to avoid
+    # sticky posts.
     for art in table:
-        if "thing" in art["class"]:
+        if "thing" in art["class"] and \
+            art.find('span', {'class':'rank'}).string is not None:
             articles.append(_parse_article(art))
 
     return articles
